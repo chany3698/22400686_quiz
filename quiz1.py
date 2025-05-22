@@ -15,15 +15,44 @@ df = df.rename(columns={
     '초미세먼지': 'PM2.5'
 })
 
-# [1-3] 첫 행의 요약(전체) 제거
+
+# 1-3. 결측치 및 이상치 확인·처리
+# ‘전체’ 행 제거
 df = df[df['date'] != '전체']
 
-# [1-4] 자료형 변환 및 결측치 제거
-df['date']   = pd.to_datetime(df['date'], format='%Y-%m-%d')
-df['PM10']   = pd.to_numeric(df['PM10'], errors='coerce')
-df['PM2.5']  = pd.to_numeric(df['PM2.5'], errors='coerce')
-df = df.dropna(subset=['date','district','PM10','PM2.5'])
+# PM 컬럼을 숫자형으로 강제 변환
+df['PM10']  = pd.to_numeric(df['PM10'], errors='coerce')
+df['PM2.5'] = pd.to_numeric(df['PM2.5'], errors='coerce')
 
+# 처리 전 결측치 개수 출력
+print("=== 처리 전 결측치 개수 ===")
+print(df[['PM10','PM2.5']].isna().sum(), "\n")
+
+# 도메인 기준 이상치 마스크 생성
+outlier_mask = (
+    (df['PM10']  < 0)   | (df['PM10']  > 500) |
+    (df['PM2.5'] < 0)   | (df['PM2.5'] > 300)
+)
+
+# 이상치 개수 출력 및 제거
+print("=== 이상치 개수 ===", outlier_mask.sum(), "행\n")
+df = df[~outlier_mask]
+
+# 이상치 제거 후 결측치 개수 출력
+print("=== 이상치 제거 후 결측치 개수 ===")
+print(df[['PM10','PM2.5']].isna().sum(), "\n")
+
+# 결측치는 중앙값으로 대체
+df['PM10']  = df['PM10'].fillna(df['PM10'].median())
+df['PM2.5'] = df['PM2.5'].fillna(df['PM2.5'].median())
+
+# 대체 후 결측치 개수 재확인
+print("=== 중앙값 대체 후 결측치 개수 ===")
+print(df[['PM10','PM2.5']].isna().sum(), "\n")
+
+
+# 1-4. 자료형 변환 및 최종 결측치 제거
+df['date'] = pd.to_datetime(df['date'], format='%Y-%m-%d')
 
 # 2. 파생변수 만들기
 # [2-1] month, day 파생변수 생성
